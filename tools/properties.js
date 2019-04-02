@@ -17,3 +17,7 @@ module.exports.name = (line) => {
 
   return '';
 };
+
+module.exports.setName = (name) => {
+  return `tvg-name="${name}"`;
+};
