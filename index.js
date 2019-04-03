@@ -9,11 +9,17 @@ const prop = require('./tools/properties');
 
 const config = require('./config');
 
+function exclude (val) {
+  return val.split(',');
+}
+
+
 program
   .version('0.1.0', '-v, --version')
   .option('--xmltv', 'Modify XLMTV Data for your new playlist')
   .option('--no-west', 'Does its best to exclude WEST Timezone')
   .option('--no-east', 'Does its best to exclude EAST Timezone')
+  .option('-e, --exclude <values>', 'Exclude channels with these keywords', exclude)
   .option('-o, --output [filename]', 'Specify the filename to be placed in the output directory', null, false)
   .parse(process.argv);
 
@@ -125,13 +131,23 @@ async function run () {
 
     if (index === arr.length - 1 && line === '') { break; }
 
+    if (program.exclude.length > 0) {
+
+      const ex = prop.name(line).toLowerCase().split(' ');
+      const found = ex.some(r => program.exclude.indexOf(r) >= 0);
+
+      if (found) {
+        io.warning(`Excluding ${prop.name(line)}`);
+        continue;
+      }
+
+    }
+
     if (!program.west && prop.includes(/^(WEST)\s|\s(WEST)$/g, prop.name(line))) {
-      io.warning(`Excluded ${prop.name(line)}`);
       continue;
     }
 
     if (!program.east && prop.includes(/^(EAST)\s|\s(EAST)$/g, prop.name(line))) {
-      io.warning(`Excluding ${prop.name(line)}`);
       continue;
     }
 
