@@ -131,27 +131,27 @@ async function run () {
 
     if (index === arr.length - 1 && line === '') { break; }
 
-    if (program.exclude.length > 0) {
+    if (filters.includes(prop.group(line.toLowerCase()))) {
+      if (program.exclude.length > 0) {
 
-      const ex = prop.name(line).toLowerCase().split(' ');
-      const found = ex.some(r => program.exclude.indexOf(r) >= 0);
+        const ex = prop.name(line).toLowerCase().split(' ');
+        const found = ex.some(r => program.exclude.indexOf(r) >= 0);
 
-      if (found) {
-        io.warning(`Excluding ${prop.name(line)}`);
+        if (found) {
+          io.warning(`Excluding ${prop.name(line)}`);
+          continue;
+        }
+
+      }
+
+      if (!program.west && prop.includes(/^(WEST)\s|\s(WEST)$/g, prop.name(line))) {
         continue;
       }
 
-    }
+      if (!program.east && prop.includes(/^(EAST)\s|\s(EAST)$/g, prop.name(line))) {
+        continue;
+      }
 
-    if (!program.west && prop.includes(/^(WEST)\s|\s(WEST)$/g, prop.name(line))) {
-      continue;
-    }
-
-    if (!program.east && prop.includes(/^(EAST)\s|\s(EAST)$/g, prop.name(line))) {
-      continue;
-    }
-
-    if (filters.includes(prop.group(line.toLowerCase()))) {
       let entry = line;
       entry = entry.replace(/USA: /g, '');
 
