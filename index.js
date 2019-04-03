@@ -189,8 +189,8 @@ async function run () {
     }
   }
 
-  let output = program.output ? `./output/${program.output}` : `./output/new.m3u`;
-  fs.writeFileSync(output, newFileContents.join('\n'));
+  let output = program.output ? `./output/${program.output}` : `./output/new`;
+  fs.writeFileSync(`${output}.m3u`, newFileContents.join('\n'));
 
   if (_xmltv) {
     io.info('Generating new xmltv data ...');
@@ -208,7 +208,7 @@ async function run () {
       var builder = new xmljs.Builder();
       var xml = builder.buildObject(results);
 
-      fs.writeFileSync(`./output/xmltv.xml`, xml);
+      fs.writeFileSync(`${output}.xml`, xml);
     });
 
   }
