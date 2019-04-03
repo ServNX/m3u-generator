@@ -7,6 +7,7 @@ module.exports.success = (message) => console.log(chalk.green(`[OK] ${message}`)
 module.exports.error = (message) => console.log(chalk.red(`[ERROR] ${message}`));
 module.exports.info = (message) => console.log(chalk.cyan(message));
 
+module.exports.intro = (message) => console.log(chalk.magenta(message));
 module.exports.header = (message) => {
   console.log();
   console.log(chalk.magenta('='.repeat(18 + message.length)));

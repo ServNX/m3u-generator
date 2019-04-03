@@ -1,5 +1,6 @@
 .idea
 *.m3u
+*.xml
 xteve.exe
 node_modules
 config.js

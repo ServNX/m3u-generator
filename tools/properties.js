@@ -1,4 +1,4 @@
-module.exports.group = (line) => {
+const group = (line) => {
   const regex = new RegExp('group-title="([a-zA-Z0-9\\s&:!\\/]{1,})"');
   const found = regex.exec(line);
 
@@ -8,7 +8,7 @@ module.exports.group = (line) => {
   return '';
 };
 
-module.exports.name = (line) => {
+const name = (line) => {
   const regex = new RegExp('tvg-name="([a-zA-Z0-9\\s&:!\\/]{1,})"');
   const found = regex.exec(line);
 
@@ -18,10 +18,32 @@ module.exports.name = (line) => {
   return '';
 };
 
-module.exports.setName = (name) => {
-  return `tvg-name="${name}"`;
+const chanNum = (line) => {
+  const regex = new RegExp('tvg-chno="([0-9]{1,})"');
+  const found = regex.exec(line);
+
+  if (found)
+    return found[1];
+
+  return false;
 };
 
-module.exports.addChanNum = (line, chanNum) => {
-  return line.replace(` tvg-name="`, ` tvg-chno="${chanNum}" tvg-name="`).trim();
+const addChanNum = (line, num) => {
+  if (chanNum(line))
+    return line.replace(`tvg-chno="${chanNum(line)}"`, `tvg-chno="${num}"`);
+
+  return line.replace(` tvg-name="`, ` tvg-chno="${num}" tvg-name="`);
+};
+
+const includes = (find, source) => {
+  const r = new RegExp(find);
+  return r.test(source);
+};
+
+module.exports = {
+  group,
+  name,
+  chanNum,
+  addChanNum,
+  includes,
 };
