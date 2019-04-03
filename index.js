@@ -196,8 +196,8 @@ async function run () {
 
       // create a new builder object and then convert
       // our json back to xml.
-      var builder = new xmljs.Builder();
-      var xml = builder.buildObject(results);
+      const builder = new xmljs.Builder();
+      const xml = builder.buildObject(results);
 
       fs.writeFileSync(`${output}.xml`, xml);
     });
