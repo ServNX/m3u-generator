@@ -17,9 +17,6 @@ function exclude (val) {
 program
   .version('0.1.0', '-v, --version')
   .option('--xmltv', 'Modify XLMTV Data for your new playlist')
-  .option('--no-west', 'Does its best to exclude WEST Timezone')
-  .option('--no-east', 'Does its best to exclude EAST Timezone')
-  .option('-e, --exclude <values>', 'Exclude channels with these keywords', exclude)
   .option('-o, --output [filename]', 'Specify the filename to be placed in the output directory', null, false)
   .parse(process.argv);
 
@@ -29,15 +26,8 @@ io.intro(figlet.textSync('M3U Generator', {
   verticalLayout: 'default',
 }));
 
-if (program.args.length <= 0) {
-  io.error('Invalid Usage!');
-  process.exit(1);
-}
-
 let newFileContents = ['#EXTM3U'];
 let triggered = false;
-
-const filters = program.args;
 
 async function getPlaylist () {
   if (config.m3u !== '') {
@@ -79,8 +69,7 @@ async function getXmlTv () {
     io.info('Reading local xmltv data ...');
     return Promise.resolve(fs.readFileSync(config.xmltv, 'utf-8').toString());
   } else {
-    io.error('xmltv property in configuration must be set to a none empty value!');
-    process.exit(1);
+    io.warning('xmltv property in configuration is missing. Continuing ...');
   }
 
 }
@@ -121,34 +110,35 @@ async function run () {
     }
   }
 
-  let group = '';
-  let channelNum = 9000;
-  const groups = {};
-
   io.info('Generating new m3u data ...');
+
+  if (config.groups.length <= 0) {
+    io.warning('No groups specified in configuration. Continuing ...');
+  }
+
+  let group = '';
+
   for (const [index, data] of arr.entries()) {
     const line = data.toString();
 
     if (index === arr.length - 1 && line === '') { break; }
 
-    if (filters.includes(prop.group(line.toLowerCase()))) {
-      if (program.exclude.length > 0) {
-
+    if (Object.keys(config.groups).includes(prop.group(line))) {
+      if (config.excludes.length > 0) {
         const ex = prop.name(line).toLowerCase().split(' ');
-        const found = ex.some(r => program.exclude.indexOf(r) >= 0);
+        const found = ex.some(r => config.excludes.indexOf(r) >= 0);
 
         if (found) {
           io.warning(`Excluding ${prop.name(line)}`);
           continue;
         }
-
       }
 
-      if (!program.west && prop.includes(/^(WEST)\s|\s(WEST)$/g, prop.name(line))) {
+      if (!config.west && prop.includes(/^(WEST)\s|\s(WEST)$/g, prop.name(line))) {
         continue;
       }
 
-      if (!program.east && prop.includes(/^(EAST)\s|\s(EAST)$/g, prop.name(line))) {
+      if (!config.east && prop.includes(/^(EAST)\s|\s(EAST)$/g, prop.name(line))) {
         continue;
       }
 
@@ -157,36 +147,37 @@ async function run () {
 
       group = prop.group(line);
 
-      groups[group] ?
-        groups[group].push(entry) :
-        groups[group] = [entry];
+      config.groups[group].channels ?
+        config.groups[group].channels.push(entry) :
+        config.groups[group].channels = [entry];
 
       triggered = true;
 
     } else {
       if (triggered) {
-        groups[group].push(line);
+        config.groups[group].channels.push(line);
         triggered = false;
       }
     }
 
   }
 
-  for (let key of Object.keys(groups)) {
-    if (config.groups[key]) {
-      channelNum = config.groups[key].chanNum;
-    }
+  let chanNum = 2000;
 
-    for (let line of groups[key]) {
+  for (let key of Object.keys(config.groups)) {
+
+    for (let line of config.groups[key].channels) {
       let entry = line;
 
-      if (line.toString().startsWith('#EXTINF:')) {
-        channelNum = channelNum + 1;
-        entry = prop.addChanNum(line, channelNum);
+      if (line.startsWith('#EXTINF:')) {
+        entry = prop.addChanNum(line, chanNum++);
       }
 
       newFileContents.push(entry);
     }
+
+    const len = config.groups[key].channels.length;
+    chanNum = (chanNum - len / 2 + 1000);
   }
 
   let output = program.output ? `./output/${program.output}` : `./output/new`;
