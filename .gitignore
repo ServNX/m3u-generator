@@ -2,3 +2,4 @@
 *.m3u
 xteve.exe
 node_modules
+config.js

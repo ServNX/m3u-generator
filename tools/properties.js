@@ -21,3 +21,7 @@ module.exports.name = (line) => {
 module.exports.setName = (name) => {
   return `tvg-name="${name}"`;
 };
+
+module.exports.addChanNum = (line, chanNum) => {
+  return line.replace(` tvg-name="`, ` tvg-chno="${chanNum}" tvg-name="`).trim();
+};

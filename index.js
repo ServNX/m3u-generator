@@ -2,9 +2,12 @@
 const fs = require('fs');
 const program = require('commander');
 const figlet = require('figlet');
-const request = require('request');
+const axios = require('axios');
+
 const io = require('./tools/io');
 const prop = require('./tools/properties');
+
+const config = require('./config');
 
 program
   .version('0.1.0', '-v, --version')
@@ -19,39 +22,50 @@ io.info(figlet.textSync('M3U Generator', {
   verticalLayout: 'default',
 }));
 
+if (program.args.length <= 0) {
+  io.error('Invalid Usage!');
+  process.exit(1);
+}
+
 let newFileContents = ['#EXTM3U'];
 let triggered = false;
 
-if (program.args.length <= 0) {
-  io.error('Must specify a local or remote file as the first argument');
-  process.exit(1);
-}
-
-if (program.args.length <= 1) {
-  io.error('Must specify at least 1 group');
-  process.exit(1);
-}
-
-const file = program.args[0];
-const filters = program.args.splice(1);
+let file;
+let filters;
 
 async function getData () {
-  if (file.toString().startsWith('http')) {
-    request.get(file, (error, response, body) => {
-      if (!error && response.statusCode === 200) {
-        return body;
-      }
-    });
+  if (config.url !== '') {
+    file = config.url;
+    filters = program.args;
   } else {
-    return fs.readFileSync(file).toString();
+    file = program.args[0];
+    filters = program.args.splice(1);
   }
+
+  if (file.toString().startsWith('http')) {
+    return await axios.get(file.toString())
+      .then(resp => {
+        return Promise.resolve(resp.data);
+      })
+      .catch(err => {
+        return Promise.reject(err.response);
+      });
+  }
+
+  return Promise.resolve(fs.readFileSync(file).toString());
 }
 
 async function run () {
+
   const _data = await getData().catch(err => {
     io.error(err);
     process.exit(1);
   });
+
+  if (!_data) {
+    io.error('Something went wrong with populating the required data. Report this bug!');
+    process.exit(1);
+  }
 
   const arr = _data.split('\n').splice(1);
 
@@ -61,7 +75,7 @@ async function run () {
   }
 
   let group = '';
-  let channelNum = 1000;
+  let channelNum = 9000;
   const groups = {};
 
   for (const [index, data] of arr.entries()) {
@@ -84,17 +98,8 @@ async function run () {
       continue;
 
     if (filters.includes(prop.group(line.toLowerCase()))) {
-
-      channelNum = channelNum + 1;
-
-      // #EXTINF:-1 tvg-id="AXSTV.us" tvg-name="USA: AXS TV" tvg-logo="http://www.axs.tv/ui/images/hdnet_programs/fbthumb_axstv_20140224.png" group-title="USA TV",USA: AXS TV
-      // http://***.co:2086/***/***/18677
-      // to
-      // #EXTINF:0 channelID="x-ID.38" tvg-chno="1004" tvg-name="USA: CINEMAX" tvg-id="1004" tvg-logo="https://media.filbalad.com/Places/logos/Medium/86957_photo.jpg" group-title="USA TV",USA: CINEMAX
-      // http://***.co:2086/***/***/13560
-
-      const entry = line
-        .replace(` tvg-name="`, ` tvg-chno="${channelNum}" tvg-name="`).trim();
+      let entry = line;
+      entry = entry.replace(/USA: /g, '');
 
       group = prop.group(line);
 
@@ -114,15 +119,27 @@ async function run () {
   }
 
   for (let key of Object.keys(groups)) {
+    if (config.groups[key]) {
+      channelNum = config.groups[key].chanNum;
+    }
+
     for (let line of groups[key]) {
-      newFileContents.push(line);
+      let entry = line;
+
+      if (line.toString().startsWith('#EXTINF:')) {
+        channelNum = channelNum + 1;
+        entry = prop.addChanNum(line, channelNum);
+      }
+
+      newFileContents.push(entry);
     }
   }
 
   let output = program.output ? `./output/${program.output}` : `./output/new.m3u`;
   fs.writeFileSync(output, newFileContents.join('\n'));
 
-  io.success('Completed Successfully!');
+  io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
 }
 
+// Run the application
 run();
