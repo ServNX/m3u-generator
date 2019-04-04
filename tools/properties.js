@@ -8,6 +8,11 @@ const group = (line) => {
   return '';
 };
 
+const hasKeyword = (keyword, source) => {
+  const kwCheck = new RegExp(`\\b${keyword.toLowerCase()}\\b`);
+  return kwCheck.test(source);
+};
+
 const name = (line) => {
   const regex = new RegExp('tvg-name="([a-zA-Z0-9\\s&\\(\\)-:!\\/]{1,})"');
   const found = regex.exec(line);
@@ -43,6 +48,7 @@ const includes = (find, source) => {
 module.exports = {
   group,
   name,
+  hasKeyword,
   chanNum,
   addChanNum,
   includes,
