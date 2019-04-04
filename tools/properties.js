@@ -9,7 +9,7 @@ const group = (line) => {
 };
 
 const name = (line) => {
-  const regex = new RegExp('tvg-name="([a-zA-Z0-9\\s&:!\\/]{1,})"');
+  const regex = new RegExp('tvg-name="([a-zA-Z0-9\\s&\\(\\)-:!\\/]{1,})"');
   const found = regex.exec(line);
 
   if(found)

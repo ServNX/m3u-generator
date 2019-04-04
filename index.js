@@ -17,6 +17,7 @@ function exclude (val) {
 program
   .version('0.1.0', '-v, --version')
   .option('--xmltv', 'Modify XLMTV Data for your new playlist')
+  .option('-s, --search', 'Search results that are like the search term', '')
   .option('-o, --output [filename]', 'Specify the filename to be placed in the output directory', null, false)
   .parse(process.argv);
 
@@ -89,9 +90,9 @@ async function run () {
     process.exit(1);
   }
 
-  const arr = _data.split('\n').splice(1);
+  const dataArr = _data.split('\n').splice(1);
 
-  if (!arr[0].toString().startsWith('#EXTINF:')) {
+  if (!dataArr[0].toString().startsWith('#EXTINF:')) {
     io.error('Invalid m3u file format. Missing #EXTINF:');
     process.exit(1);
   }
@@ -118,48 +119,58 @@ async function run () {
 
   let group = '';
 
-  for (const [index, data] of arr.entries()) {
+  for (const [index, data] of dataArr.entries()) {
     const line = data.toString();
 
-    if (index === arr.length - 1 && line === '') { break; }
+    if (index === dataArr.length - 1 && line === '') { break; }
 
     if (Object.keys(config.groups).includes(prop.group(line))) {
-      if (config.excludes.length > 0) {
-        const name = prop.name(line).toLowerCase();
 
-        let found = false;
-        for (let ex of config.excludes) {
-          const matchExcluded = new RegExp(`\\b${ex.toLowerCase()}\\b`);
+      if (program.search !== '') {
+        const matchExcluded = new RegExp(`\\b${program.search.toString().toLowerCase()}\\b`);
 
-          if (matchExcluded.test(name)) {
-            found = true;
+        if (matchExcluded.test(prop.name(line).toLowerCase())) {
+          io.warning(`Excluding ${prop.name(line)}`);
+        }
+      } else {
+        if (config.excludes.length > 0) {
+          const name = prop.name(line).toLowerCase();
+
+          let found = false;
+          for (let ex of config.excludes) {
+            const matchExcluded = new RegExp(`\\b${ex.toLowerCase()}\\b`);
+
+            if (matchExcluded.test(name)) {
+              found = true;
+            }
+          }
+
+          if (found) {
+            io.warning(`Excluding ${prop.name(line)}`);
+            continue;
           }
         }
 
-        if (found) {
-          io.warning(`Excluding ${prop.name(line)}`);
+        if (!config.west && prop.includes(/^(WEST)\s|\s(WEST)$/g, prop.name(line))) {
           continue;
         }
+
+        if (!config.east && prop.includes(/^(EAST)\s|\s(EAST)$/g, prop.name(line))) {
+          continue;
+        }
+
+        let entry = line;
+        // todo: add something in the config for search, replace ?
+        entry = entry.replace(/USA: /g, '');
+
+        group = prop.group(line);
+
+        config.groups[group].channels ?
+          config.groups[group].channels.push(entry) :
+          config.groups[group].channels = [entry];
+
+        triggered = true;
       }
-
-      if (!config.west && prop.includes(/^(WEST)\s|\s(WEST)$/g, prop.name(line))) {
-        continue;
-      }
-
-      if (!config.east && prop.includes(/^(EAST)\s|\s(EAST)$/g, prop.name(line))) {
-        continue;
-      }
-
-      let entry = line;
-      entry = entry.replace(/USA: /g, '');
-
-      group = prop.group(line);
-
-      config.groups[group].channels ?
-        config.groups[group].channels.push(entry) :
-        config.groups[group].channels = [entry];
-
-      triggered = true;
 
     } else {
       if (triggered) {
@@ -168,54 +179,57 @@ async function run () {
       }
     }
 
-  }
+  } // end for loop
 
-  let chanNum = 2000;
+  /* Start Generating the channel data */
+  if (program.search === '') {
+    let chanNum = 2000;
 
-  for (let key of Object.keys(config.groups)) {
+    for (let key of Object.keys(config.groups)) {
 
-    for (let line of config.groups[key].channels) {
-      let entry = line;
+      for (let line of config.groups[key].channels) {
+        let entry = line;
 
-      if (line.startsWith('#EXTINF:')) {
-        entry = prop.addChanNum(line, chanNum++);
+        if (line.startsWith('#EXTINF:')) {
+          entry = prop.addChanNum(line, chanNum++);
+        }
+
+        newFileContents.push(entry);
       }
 
-      newFileContents.push(entry);
+      const len = config.groups[key].channels.length;
+      chanNum = (chanNum - len / 2 + 1000);
     }
 
-    const len = config.groups[key].channels.length;
-    chanNum = (chanNum - len / 2 + 1000);
+    let output = program.output ? `./output/${program.output}` : `./output/new`;
+    fs.writeFileSync(`${output}.m3u`, newFileContents.join('\n'));
+
+    if (_xmltv) {
+      io.info('Generating new xmltv data ...');
+
+      const obj = {};
+
+      xmljs.parseString(_xmltv, (err, results) => {
+        if (err) {
+          io.error(err);
+          process.exit(1);
+        }
+
+        // modify the xml
+        // io.debug(JSON.stringify(results.tv.channel[0].$.id));
+
+        // create a new builder object and then convert
+        // our json back to xml.
+        const builder = new xmljs.Builder();
+        const xml = builder.buildObject(results);
+
+        fs.writeFileSync(`${output}.xml`, xml);
+      });
+
+    }
+
+    io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
   }
-
-  let output = program.output ? `./output/${program.output}` : `./output/new`;
-  fs.writeFileSync(`${output}.m3u`, newFileContents.join('\n'));
-
-  if (_xmltv) {
-    io.info('Generating new xmltv data ...');
-
-    const obj = {};
-
-    xmljs.parseString(_xmltv, (err, results) => {
-      if (err) {
-        io.error(err);
-        process.exit(1);
-      }
-
-      // modify the xml
-      // io.debug(JSON.stringify(results.tv.channel[0].$.id));
-
-      // create a new builder object and then convert
-      // our json back to xml.
-      const builder = new xmljs.Builder();
-      const xml = builder.buildObject(results);
-
-      fs.writeFileSync(`${output}.xml`, xml);
-    });
-
-  }
-
-  io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
 }
 
 // Run the application
