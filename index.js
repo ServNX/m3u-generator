@@ -125,8 +125,16 @@ async function run () {
 
     if (Object.keys(config.groups).includes(prop.group(line))) {
       if (config.excludes.length > 0) {
-        const ex = prop.name(line).toLowerCase().split(' ');
-        const found = ex.some(r => config.excludes.indexOf(r) >= 0);
+        const name = prop.name(line).toLowerCase();
+
+        let found = false;
+        for (let ex of config.excludes) {
+          const matchExcluded = new RegExp(`\\b${ex.toLowerCase()}\\b`);
+
+          if (matchExcluded.test(name)) {
+            found = true;
+          }
+        }
 
         if (found) {
           io.warning(`Excluding ${prop.name(line)}`);
@@ -185,6 +193,9 @@ async function run () {
 
   if (_xmltv) {
     io.info('Generating new xmltv data ...');
+
+    const obj = {};
+
     xmljs.parseString(_xmltv, (err, results) => {
       if (err) {
         io.error(err);
@@ -192,7 +203,7 @@ async function run () {
       }
 
       // modify the xml
-      // results.root.graph[0].node[0].weight = "99";
+      // io.debug(JSON.stringify(results.tv.channel[0].$.id));
 
       // create a new builder object and then convert
       // our json back to xml.
