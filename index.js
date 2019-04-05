@@ -1,6 +1,7 @@
 'use strict';
 const app = require('commander');
 const M3U = require('./classes/m3u');
+const XMLTV = require('./classes/xmltv');
 
 const figlet = require('figlet');
 const io = require('./tools/io');
@@ -32,34 +33,14 @@ async function run () {
     });
 
   /* Start XMLTV Stuff */
-  // if (app.xmltv) {
-  //   await parser.getXmlTv()
-  //     .then(xmltv => {
-  //
-  //       xmljs.parseString(xmltv, (err, results) => {
-  //         if (err) {
-  //           io.error(err);
-  //           process.exit(1);
-  //         }
-  //
-  //         // modify the xml
-  //         // io.debug(JSON.stringify(results.tv.channel[0].$.id));
-  //
-  //         // create a new builder object and then convert
-  //         // our json back to xml.
-  //         const builder = new xmljs.Builder();
-  //         const xml = builder.buildObject(results);
-  //
-  //         fs.writeFileSync(`${output}.xml`, xml);
-  //
-  //         io.success(`${output}.xml written successfully!`);
-  //       });
-  //     })
-  //     .catch(err => {
-  //       io.error(err);
-  //       process.exit(1);
-  //     });
-  // }
+  if (app.xmltv) {
+    const xmltv = new XMLTV(app, config);
+
+    await xmltv.download().catch(err => {
+      io.error(err);
+      process.exit(1);
+    });
+  }
 
 }
 

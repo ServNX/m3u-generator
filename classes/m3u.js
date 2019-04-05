@@ -1,7 +1,7 @@
 const fs = require('fs');
-const axios = require('axios/index');
-const io = require('../tools/io');
+const axios = require('axios');
 
+const io = require('../tools/io');
 const prop = require('../tools/properties');
 
 module.exports = class M3U {
@@ -121,7 +121,7 @@ module.exports = class M3U {
       process.exit(1);
     }
 
-    const output = this.app.output ? `./output/${this.app.output}` : `./output/new`;
+    const output = this.app.output ? `./output/${this.app.output}.m3u` : `./output/new.m3u`;
     let newFileContents = ['#EXTM3U'];
 
     let chanNum = 2000;
@@ -142,7 +142,7 @@ module.exports = class M3U {
       chanNum = (chanNum - len / 2 + 1000);
     }
 
-    fs.writeFileSync(`${output}.m3u`, newFileContents.join('\n'));
+    fs.writeFileSync(output, newFileContents.join('\n'));
 
     io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
   }
