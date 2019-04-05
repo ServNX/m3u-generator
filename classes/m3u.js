@@ -73,11 +73,11 @@ module.exports = class M3U {
             continue;
           }
 
-          if (!this.config.west && this.isWest(name)) {
+          if (!this.config.west && prop.isWest(name)) {
             continue;
           }
 
-          if (!this.config.east && this.isEast(name)) {
+          if (!this.config.east && prop.isEast(name)) {
             continue;
           }
 
@@ -163,16 +163,6 @@ module.exports = class M3U {
 
   isGroupInConfig (line) {
     return Object.keys(this.config.groups).includes(prop.group(line));
-  }
-
-  isWest (name) {
-    const isWest = new RegExp('^(WEST)\\s|\\s(WEST)$', 'g');
-    return isWest.test(name);
-  }
-
-  isEast (name) {
-    const isEast = new RegExp('^(EAST)\\s|\\s(EAST)$', 'g');
-    return isEast.test(name);
   }
 
 };

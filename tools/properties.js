@@ -45,6 +45,16 @@ const includes = (find, source) => {
   return r.test(source);
 };
 
+const isWest = (name) => {
+  const isWest = new RegExp('^(WEST)\\s|\\s(WEST)$', 'g');
+  return isWest.test(name);
+};
+
+const isEast = (name) => {
+  const isEast = new RegExp('^(EAST)\\s|\\s(EAST)$', 'g');
+  return isEast.test(name);
+}
+
 module.exports = {
   group,
   name,
@@ -52,4 +62,6 @@ module.exports = {
   chanNum,
   addChanNum,
   includes,
+  isEast,
+  isWest,
 };
