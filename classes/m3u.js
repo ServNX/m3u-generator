@@ -11,7 +11,7 @@ module.exports = class M3U {
     this.config = config;
   }
 
-  async download () {
+  async run() {
     if (this.config.m3u !== '') {
 
       if (this.config.m3u.startsWith('http')) {
@@ -145,6 +145,8 @@ module.exports = class M3U {
     fs.writeFileSync(output, newFileContents.join('\n'));
 
     io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
+
+    return newFileContents;
   }
 
   isExcluded (name) {

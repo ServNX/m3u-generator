@@ -18,29 +18,32 @@ app
   .option('-o, --output [filename]', 'Specify the filename to be placed in the output directory', null, false)
   .parse(process.argv);
 
-io.intro(figlet.textSync('M3U Tool Pro', {
+io.intro(figlet.textSync('M3U Pro', {
   font: 'Big Money-se',
   horizontalLayout: 'default',
   verticalLayout: 'default',
 }));
 
-async function run () {
+async function run() {
   const m3u = new M3U(app, config);
 
-  await m3u.download().catch(err => {
+  await m3u.run()
+    .then(async data => {
+      if (app.xmltv) {
+        const xmltv = new XMLTV(app, config, data);
+
+        await xmltv.run()
+          .catch(err => {
+            io.error(err);
+            process.exit(1);
+          });
+      }
+    })
+    .catch(err => {
       io.error(err);
       process.exit(1);
     });
 
-  /* Start XMLTV Stuff */
-  if (app.xmltv) {
-    const xmltv = new XMLTV(app, config);
-
-    await xmltv.download().catch(err => {
-      io.error(err);
-      process.exit(1);
-    });
-  }
 
 }
 
