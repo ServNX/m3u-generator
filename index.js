@@ -16,11 +16,11 @@ const config = require('./config');
 app
   .version('0.1.0', '-v, --version')
   .option('--xmltv', 'Modify XLMTV Data for your new playlist')
-  .option('-s, --search', 'Search results that are like the search term', false)
+  .option('-s, --search <keyword>', 'Search results that are like the search term')
   .option('-o, --output [filename]', 'Specify the filename to be placed in the output directory', null, false)
   .parse(process.argv);
 
-io.intro(figlet.textSync('M3U Generator', {
+io.intro(figlet.textSync('M3U Tool Pro', {
   font: 'Big Money-se',
   horizontalLayout: 'default',
   verticalLayout: 'default',
@@ -58,11 +58,9 @@ async function run() {
 
         const name = prop.name(line);
 
-        if (Object.keys(config.groups).includes(name)) {
-
+        if (Object.keys(config.groups).includes(prop.group(line))) {
           if (app.search) {
-            io.info(`Searching for ${app.search} ...`);
-            if (prop.hasKeyword(app.search.toLowerCase(), name.toLowerCase())) {
+            if (prop.hasKeyword(app.search.toString().toLowerCase(), name.toLowerCase())) {
               io.success(`Found: ${name}`);
             }
           } else {
@@ -71,13 +69,14 @@ async function run() {
               let found = false;
 
               for (let ex of config.excludes) {
-                io.debug(`ex: ${ex.toLowerCase()} name: ${name.toLowerCase()}`);
-                found = prop.hasKeyword(ex.toLowerCase(), name.toLowerCase());
+                if (prop.hasKeyword(ex.toLowerCase(), name.toLowerCase())) {
+                  found = true;
+                }
               }
 
               if (found) {
                 // todo: add to logger
-                io.warning(`Excluding: ${name}`);
+                // io.warning(`Excluding: ${name}`);
                 continue;
               }
             }
