@@ -25,7 +25,7 @@ module.exports = class M3U {
               data = data.splice(1);
             }
 
-            if (!this.hasProperFormatting(data)) {
+            if (!data[0].toString().startsWith('#EXTINF:')) {
               io.error('Invalid m3u file format. Missing #EXTINF:');
               process.exit(1);
             }
@@ -81,10 +81,20 @@ module.exports = class M3U {
             continue;
           }
 
-          // todo: add something in the config for search, replace ?
-          let entry = line.replace(/USA: /g, '');
-
           group = prop.group(line);
+
+          let entry = line;
+
+          if (this.config.groups[group]['replace']) {
+            const replaceObj = this.config.groups[group]['replace'];
+
+            for (const re of Object.keys(replaceObj)) {
+              const searchFor = new RegExp(re, 'g');
+              const replaceWith = replaceObj[re].toString();
+
+              entry = entry.replace(searchFor, replaceWith);
+            }
+          }
 
           this.config.groups[group].channels ?
             this.config.groups[group].channels.push(entry) :
@@ -165,9 +175,4 @@ module.exports = class M3U {
     return isEast.test(name);
   }
 
-  hasProperFormatting (data) {
-    return data[0]
-      .toString()
-      .startsWith('#EXTINF:');
-  }
 };
