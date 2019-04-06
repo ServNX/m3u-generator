@@ -9,7 +9,7 @@ const prop = require('../tools/properties');
 
 module.exports = class Parser {
 
-  constructor(app, config, m3uData) {
+  constructor (app, config, m3uData) {
     this.app = app;
     this.config = config;
     this.m3uData = m3uData;
@@ -20,13 +20,27 @@ module.exports = class Parser {
 
   }
 
-  async run() {
+  async run () {
     switch (os.platform()) {
       case 'win32':
+        if (!fs.pathExists(path.resolve(process.cwd(), 'bin', 'zapinstall.exe'))) {
+          io.info('Downloading zap2xml.exe ...');
+          await this.downloadZapInstaller()
+            .then(() => {
+              io.success('Download Successful');
+            })
+            .catch(err => {
+              io.error(err);
+              process.exit(1);
+            });
+        }
+
         io.info('Executing zap2xml.bat ...');
+        io.warning('You may be prompted to extract files, just extract them in the default location!');
         const bat = path.resolve(process.cwd(), 'bin', 'zap2xml.bat');
         await io.spawnSync('cmd.exe', ['/c', bat, this.config.zap.email, this.config.zap.password]);
         break;
+
       case 'linux':
         break;
       default:
@@ -42,7 +56,7 @@ module.exports = class Parser {
 
   }
 
-  async parseData(data) {
+  async parseData (data) {
     parser.parseString(data, (err, results) => {
       if (err) {
         io.error(err);
@@ -52,7 +66,6 @@ module.exports = class Parser {
       for (const [index, line] of this.m3uData.entries()) {
         // results.tv.channel[index].$.id
       }
-
 
       // modify the xml
       io.debug(JSON.stringify(results.tv.channel[0].$.id));
@@ -70,7 +83,23 @@ module.exports = class Parser {
     });
   }
 
-  async cleanup() {
+  async downloadZapInstaller () {
+    const dPath = path.resolve(process.cwd(), 'bin', 'zapinstall.exe');
+    const writer = fs.createWriteStream(dPath);
+
+    const response = await axios.get('http://fossick.tk/?h=fzoexiy', {
+      responseType: 'stream'
+    });
+
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+  }
+
+  async cleanup () {
     io.info('Cleaning up ...');
 
     try {
