@@ -49,7 +49,22 @@ module.exports = class Parser {
         process.exit(1);
     }
 
-    await this.cleanup();
+    try {
+      const file = path.resolve(process.cwd(), 'xmltv.xml');
+      do {} while (!await fs.pathExists(file));
+
+      await fs.remove(path.resolve(process.cwd(), 'output', this.output));
+
+      setTimeout(async () => {
+        await fs.move(path.resolve(process.cwd(), 'xmltv.xml'), path.resolve(process.cwd(), 'output', this.output));
+        return await this.parseData();
+      }, 2000);
+
+    } catch (err) {
+      io.error(err);
+      process.exit(1);
+    }
+
     io.success('Successfully Generated XMLTV Data');
 
     /* Begin parsing the data and making the changes to map the xml to the m3u playlist */
@@ -57,30 +72,38 @@ module.exports = class Parser {
 
   }
 
-  async parseData (data) {
+  async parseData () {
+    const data = fs.readFileSync(path.resolve(process.cwd(), 'output', this.output), 'utf-8').toString();
+
     parser.parseString(data, (err, results) => {
       if (err) {
         io.error(err);
         process.exit(1);
       }
 
-      for (const [index, line] of this.m3uData.entries()) {
-        // results.tv.channel[index].$.id
+      for (const channel of results.tv.channel) {
+        for (const name of channel['display-name']) {
+          for (const line of this.m3uData) {
+            if (line.toString().startsWith('#EXTINF:')) {
+              const likeCheck = new RegExp(name, 'gi');
+              if (likeCheck.test(prop.name(line))) {
+                io.debug(`${prop.name(line)} is like ${name}`);
+              }
+            }
+          }
+        }
       }
-
-      // modify the xml
-      io.debug(JSON.stringify(results.tv.channel[0].$.id));
 
       // create a new builder object and then convert
       // our json back to xml.
-      const builder = new parser.Builder();
-      const xml = builder.buildObject(results);
-
-      fs.writeFileSync(this.output, xml);
-
+      // const builder = new parser.Builder();
+      // const xml = builder.buildObject(results);
+      //
+      // fs.writeFileSync(this.output, xml);
+      //
       io.success(`${this.output} written successfully!`);
-
-      return xml;
+      //
+      // return xml;
     });
   }
 
@@ -98,28 +121,6 @@ module.exports = class Parser {
       writer.on('finish', resolve);
       writer.on('error', reject);
     });
-  }
-
-  async cleanup () {
-    io.info('Cleaning up ...');
-
-    try {
-      const file = path.resolve(process.cwd(), 'xmltv.xml');
-      const exists = await fs.pathExists(file);
-
-      await fs.remove(path.resolve(process.cwd(), 'output', this.output));
-
-      do {
-        setTimeout(async () => {
-          await fs.move(path.resolve(process.cwd(), 'xmltv.xml'), path.resolve(process.cwd(), 'output', this.output));
-          return '';
-        }, 2000);
-      } while (!exists);
-
-    } catch (err) {
-      io.error(err);
-      process.exit(1);
-    }
   }
 
 };
