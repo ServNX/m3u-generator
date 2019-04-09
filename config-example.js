@@ -9,6 +9,10 @@ module.exports = {
   // All Eastern Timezones ?
   east: true,
 
+  // The minimal number a channel number can be
+  // Starts here and increments each channel by 1
+  minChannelNum: 2000,
+
   // ZAP2IT Login Info
   zap: {
     email: 'email@gmail.com',

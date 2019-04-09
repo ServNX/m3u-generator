@@ -124,7 +124,7 @@ module.exports = class M3U {
     const output = this.app.output ? `./output/${this.app.output}.m3u` : `./output/new.m3u`;
     let newFileContents = ['#EXTM3U'];
 
-    let chanNum = 2000;
+    let chanNum = this.config.minChannelNum;
 
     for (let key of Object.keys(groups)) {
 
