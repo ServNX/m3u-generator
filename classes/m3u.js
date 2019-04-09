@@ -59,7 +59,7 @@ module.exports = class M3U {
         break;
       }
 
-      const name = prop.name(line);
+      const name = prop.tvgName(line);
 
       if (this.isGroupInConfig(line)) {
         if (this.app.search) {
@@ -81,7 +81,7 @@ module.exports = class M3U {
             continue;
           }
 
-          group = prop.group(line);
+          group = prop.groupTitle(line);
 
           let entry = line;
 
@@ -132,7 +132,9 @@ module.exports = class M3U {
         let entry = line;
 
         if (line.startsWith('#EXTINF:')) {
-          entry = prop.addChanNum(line, chanNum++);
+          const chno = chanNum++;
+          entry = prop.setChno(line, chno);
+          entry = prop.setCUID(entry, `x-ID.${chno}`);
         }
 
         newFileContents.push(entry);
@@ -145,6 +147,14 @@ module.exports = class M3U {
     fs.writeFileSync(output, newFileContents.join('\n'));
 
     io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
+
+    if (this.app.xteve) {
+      const res = await axios.post('http://192.168.1.2:34400/api/', {
+        "cmd": "status",
+      });
+
+      io.debug(JSON.stringify(res.data));
+    }
 
     return newFileContents;
   }
@@ -164,7 +174,7 @@ module.exports = class M3U {
   }
 
   isGroupInConfig (line) {
-    return Object.keys(this.config.groups).includes(prop.group(line));
+    return Object.keys(this.config.groups).includes(prop.groupTitle(line));
   }
 
 };

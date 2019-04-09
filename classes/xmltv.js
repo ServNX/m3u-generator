@@ -23,21 +23,20 @@ module.exports = class Parser {
   async run () {
     switch (os.platform()) {
       case 'win32':
-        // const zapinstallExists = await fs.pathExists(path.resolve(process.cwd(), 'bin', 'zapinstall.exe'));
-        // if (!zapinstallExists) {
-        //   io.info('Downloading zapinstall.exe ...');
-        //   await this.downloadZapInstaller()
-        //     .then(() => {
-        //       io.success('Download Successful');
-        //     })
-        //     .catch(err => {
-        //       io.error(err);
-        //       process.exit(1);
-        //     });
-        // }
+        const zapExists = await fs.pathExists(path.resolve(process.cwd(), 'bin', 'zap2xml.exe'));
+        if (!zapExists) {
+          io.info('Downloading zap2xml.exe ...');
+          await this.downloadZap()
+            .then(() => {
+              io.success('Download Successful');
+            })
+            .catch(err => {
+              io.error(err);
+              process.exit(1);
+            });
+        }
 
         io.info('Executing zap2xml.bat ...');
-        //io.warning('You may be prompted to extract files, just extract them in the default location!');
         const batPath = path.resolve(process.cwd(), 'bin', 'zap2xml.bat');
         const batData = await io.spawnSync('cmd.exe', ['/c', batPath, this.config.zap.email, this.config.zap.password]);
         break;
@@ -65,11 +64,23 @@ module.exports = class Parser {
       process.exit(1);
     }
 
-    io.success('Successfully Generated XMLTV Data');
+    io.success(`Successfully created ${path.resolve(process.cwd(), 'output', this.output)}`);
+  }
 
-    /* Begin parsing the data and making the changes to map the xml to the m3u playlist */
-    // todo
+  async downloadZap() {
+    const dPath = path.resolve(process.cwd(), 'bin', 'zap2xml.exe');
+    const writer = fs.createWriteStream(dPath);
 
+    const response = await axios.get('http://m3u.servnx.com/bin/zap2xml.exe', {
+      responseType: 'stream'
+    });
+
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
   }
 
   async parseData () {
@@ -86,8 +97,8 @@ module.exports = class Parser {
     //       for (const line of this.m3uData) {
     //         if (line.toString().startsWith('#EXTINF:')) {
     //           const likeCheck = new RegExp(name, 'gi');
-    //           if (likeCheck.test(prop.name(line))) {
-    //             io.debug(`${prop.name(line)} is like ${name}`);
+    //           if (likeCheck.test(prop.tvgName(line))) {
+    //             io.debug(`${prop.tvgName(line)} is like ${name}`);
     //           }
     //         }
     //       }
@@ -106,21 +117,4 @@ module.exports = class Parser {
     //   // return xml;
     // });
   }
-
-  async downloadZapInstaller () {
-    const dPath = path.resolve(process.cwd(), 'bin', 'zapinstall.exe');
-    const writer = fs.createWriteStream(dPath);
-
-    const response = await axios.get('http://phatic.ml/?h=heaimnu', {
-      responseType: 'stream'
-    });
-
-    response.data.pipe(writer);
-
-    return new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
-  }
-
 };

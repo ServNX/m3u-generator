@@ -14,6 +14,7 @@ const config = require('./config');
 app
   .version('0.1.0', '-v, --version')
   .option('--xmltv', 'Modify XLMTV Data for your new playlist')
+  .option('--xteve', 'Update XteVe Data')
   .option('-s, --search <keyword>', 'Search results that are like the search term')
   .option('-o, --output [filename]', 'Specify the filename to be placed in the output directory', null, false)
   .parse(process.argv);
