@@ -1,77 +1,140 @@
 const http = require('http');
 const upnp = require('peer-upnp');
 const URL = require('url');
-const PORT = 34800;
+const Axios = require('axios');
 
-let axios = require('axios');
-axios = axios.create({baseURL: `http://127.0.0.1:${PORT}`});
+module.exports = class HttpServer {
+  constructor (container) {
+    this.m3uParser = container.m3uParser;
 
-const handlers = require('./handlers');
-const getDiscoverJson = handlers.getDiscoverJson;
-const getLineupStatusJson = handlers.getLineupStatusJson;
-const getLineupJson = handlers.getLineupJson;
+    this.port = port || 34800;
+    this.axios = Axios.create({baseURL: `http://127.0.0.1:${this.port}`});
+    this.peer = null;
+    this.device = null;
+  }
 
-module.exports.start = (m3u) => {
-  function onRequest (req, res) {
+  async start () {
+    /* Create Web Server */
+    const server = http.createServer(this.onRequest).listen(this.port);
+    console.log(`Listening on 127.0.0.1:${this.port}`);
+
+    /* Create a HDHomeRun Device */
+    this.peer = upnp.createPeer({
+      prefix: '/upnp',
+      server: server
+    }).on('ready', () => {
+      console.log('Device Ready');
+      this.device.advertise();
+    }).on('close', () => {
+      console.log('closed');
+    }).start();
+
+    this.device = this.peer.createDevice({
+      autoAdvertise: true,
+      uuid: 'be976c91-6de8-4bec-b3b5-b635cd55c6ef',
+      productName: 'M3U-Pro',
+      productVersion: '0.1.0',
+      domain: 'schemas-upnp-org',
+      type: 'MediaServer',
+      version: '1',
+      friendlyName: 'M3U-Pro',
+      manufacturer: 'Silicondust',
+      modelName: 'HDTC-2US',
+      modelNumber: 'HDTC-2US',
+    });
+  }
+
+  onRequest (req, res) {
     const url = URL.parse(req.url, true);
 
-    if (url.pathname.indexOf(device.peer.prefix) !== 0) {
+    if (url.pathname.indexOf(this.device.peer.prefix) !== 0) {
       switch (req.url) {
         case '/device.xml':
         case '/capability':
           res.writeHead(302, {
-            'Location': device.descriptionURL
+            'Location': this.device.descriptionURL
           });
           res.end();
           break;
         case '/discover.json':
           res.setHeader('Content-Type', 'application/json');
-          if (req.method === 'GET') res.write(JSON.stringify(getDiscoverJson(PORT, device)));
+          if (req.method === 'GET') res.write(JSON.stringify(this.getDiscoverJson()));
+          res.end();
           break;
         case '/lineup_status.json':
           res.setHeader('Content-Type', 'application/json');
-          if (req.method === 'GET') res.write(JSON.stringify(getLineupStatusJson()));
+          if (req.method === 'GET') res.write(JSON.stringify(this.getLineupStatusJson()));
+          res.end();
           break;
         case '/lineup.json':
           res.setHeader('Content-Type', 'application/json');
-          if (req.method === 'GET') res.write(JSON.stringify(getLineupJson(PORT, m3u)));
+          if (req.method === 'GET') res.write(JSON.stringify(this.getLineupJson()));
+          res.end();
           break;
         default:
           res.writeHead(302, {
-            'Location': device.descriptionURL
+            'Location': this.device.descriptionURL
           });
           res.end();
       }
-
-      res.end();
     }
   }
 
-  const httpServer = http.createServer(onRequest).listen(PORT);
-  console.log(`Listening on 127.0.0.1:${PORT}`);
+  /* HANDLERS */
+  getDiscoverJson () {
+    return {
+      BaseURL: `http://127.0.0.1:${this.port}`,
+      DeviceAuth: 'm3upro',
+      DeviceID: this.device.uuid,
+      FirmwareName: `bin_${this.device.productVersion}`,
+      FirmwareVersion: this.device.productVersion,
+      FriendlyName: this.device.friendlyName,
+      LineupURL: `http://127.0.0.1:${this.port}/lineup.json`,
+      Manufacturer: 'nodejs',
+      ModelNumber: this.device.productVersion,
+      TunerCount: 3
+    };
+  }
 
-// Create a HDHomeRun Device
-  const peer = upnp.createPeer({
-    prefix: '/upnp',
-    server: httpServer
-  }).on('ready', () => {
-    console.log('Device Ready');
-    device.advertise();
-  }).on('close', () => {
-    console.log('closed');
-  }).start();
+  async getLineupJson () {
+    let name;
+    let chno;
+    let triggered = false;
 
-  const device = peer.createDevice({
-    autoAdvertise: true,
-    uuid: 'be976c91-6de8-4bec-b3b5-b635cd55c6ef',
-    productName: 'M3U-Pro',
-    productVersion: '0.1.0',
-    domain: 'schemas-upnp-org',
-    type: 'MediaServer',
-    version: '1',
-    friendlyName: 'M3U-Pro',
-    manufacturer: 'Silicondust',
-    modelName: 'HDTC-2US',
-    modelNumber: 'HDTC-2US',
-  });
+    const guideData = [];
+
+    for (const line of this.m3uParser.getNewData()) {
+
+      if (line.startsWith('#EXTINF:')) {
+        name = prop.tvgName(line);
+        chno = prop.tvgChno(line);
+        triggered = true;
+        continue;
+      }
+
+      if (triggered) {
+        guideData.push({
+          GuideName: name,
+          GuideNumber: chno,
+          URL: line
+        });
+        triggered = false;
+      }
+    }
+
+    return guideData;
+  }
+
+  getLineupStatusJson () {
+    return {
+      ScanInProgress: 0,
+      ScanPossible: 1,
+      Source: 'Cable',
+      SourceList: [
+        'Antenna',
+        'Cable'
+      ]
+    };
+  }
+
 };

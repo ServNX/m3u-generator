@@ -4,11 +4,12 @@ const axios = require('axios');
 const io = require('../tools/io');
 const prop = require('../tools/properties');
 
-module.exports = class M3U {
+module.exports = class M3uParser {
 
-  constructor (app, config) {
-    this.app = app;
-    this.config = config;
+  constructor (container) {
+    this.app = container.App;
+    this.config = container.Config;
+    this.db = container.DB;
   }
 
   async run() {

@@ -1,13 +1,12 @@
 'use strict';
-const app = require('commander');
-const httpServer = require('./http/httpServer');
-
-const M3U = require('./classes/m3u');
-const XMLTV = require('./classes/xmltv');
-
 const figlet = require('figlet');
+
+const container = require('./container/createContainer')();
+const app = container.App;
+const httpServer = container.HttpServer;
+const config = container.Config;
+
 const io = require('./tools/io');
-const config = require('./config');
 
 // todo: add logger
 // todo: add debug option and make use of it
