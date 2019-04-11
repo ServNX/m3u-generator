@@ -148,14 +148,6 @@ module.exports = class M3U {
 
     io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
 
-    if (this.app.xteve) {
-      const res = await axios.post('http://192.168.1.2:34400/api/', {
-        "cmd": "status",
-      });
-
-      io.debug(JSON.stringify(res.data));
-    }
-
     return newFileContents;
   }
 
