@@ -1,46 +1,49 @@
-const fs = require('fs');
+const fs = require('fs-extra');
 const axios = require('axios');
 
 const io = require('../tools/io');
 const prop = require('../tools/properties');
+const path = require('../tools/paths');
 
 module.exports = class M3uParser {
 
   constructor (container) {
     this.app = container.App;
     this.config = container.Config;
-    this.db = container.DB;
+    this.channels = container.Channels;
+
+    this.rawData = null;
+
+    this.groups = [];
   }
 
-  async run() {
+  async run () {
     if (this.config.m3u !== '') {
 
-      if (this.config.m3u.startsWith('http')) {
-        io.info('Downloading remote m3u playlist ...');
-        return await axios.get(this.config.m3u)
-          .then(async resp => {
-            const results = resp.data.toString();
-            let data = results.split('\n');
+      const channels = await this.channels
+        .all()
+        .catch(err => {
+          io.error(err);
+          process.exit(1);
+        });
 
-            if (results.startsWith('#EXTM3U')) {
-              data = data.splice(1);
-            }
+      if (channels.length <= 0 || this.app.update) {
 
-            if (!data[0].toString().startsWith('#EXTINF:')) {
-              io.error('Invalid m3u file format. Missing #EXTINF:');
-              process.exit(1);
-            }
+        if (this.config.m3u.startsWith('http')) {
+          this.rawData = await this.downloadRemotePlaylist();
+        } else {
+          if (!fs.exists(this.config.m3u)) {
+            io.error(`${this.config.m3u} Not Found!`);
+            process.exit(1);
+          }
 
-            return await this.processData(data);
-          })
-          .catch(err => {
-            return Promise.reject(err);
-          });
+          io.info('Reading local m3u playlist ...');
+          this.rawData = fs.readFileSync(this.config.m3u, 'utf-8').toString();
+        }
+
+        await this.processData();
+        return await this.createNewPlaylist();
       }
-
-      // todo: validate the file exists before proceeding!
-      io.info('Reading local m3u playlist ...');
-      return fs.readFileSync(this.config.m3u, 'utf-8').toString();
 
     } else {
       io.error('m3u property in configuration must be set to a none empty value!');
@@ -49,99 +52,139 @@ module.exports = class M3uParser {
 
   }
 
-  async processData (data) {
-    let triggered = false;
+  async downloadRemotePlaylist () {
+    io.info('Downloading remote m3u playlist ...');
+    return await axios.get(this.config.m3u)
+      .then(async resp => {
+        const results = resp.data.toString();
+        let data = results.split('\n');
+
+        if (results.startsWith('#EXTM3U')) {
+          data = data.splice(1);
+        }
+
+        if (!data[0].toString().startsWith('#EXTINF:')) {
+          io.error('Invalid m3u file format. Missing #EXTINF:');
+          process.exit(1);
+        }
+
+        return data;
+      })
+      .catch(err => {
+        return Promise.reject(err);
+      });
+  }
+
+  async processData () {
     let group = '';
 
-    for (const [index, value] of data.entries()) {
+    for (const [index, value] of this.rawData.entries()) {
       const line = value.toString();
 
-      if (index === data.length - 1 && line === '') {
+      if (index === this.rawData.length - 1 && line === '') {
         break;
       }
 
-      const name = prop.tvgName(line);
+      if (line.startsWith('#EXTINF:')) {
+        const name = prop.tvgName(line);
 
-      if (this.isGroupInConfig(line)) {
-        if (this.app.search) {
-          const keyword = this.app.search;
-          if (prop.hasKeyword(keyword, name.toLowerCase())) {
-            io.success(`Found: ${name}`);
-          }
-        } else {
-          if (this.isExcluded(name.toLowerCase())) {
-            // todo: log warnings to logger
-            continue;
-          }
+        if (this.groupInConfig(prop.groupTitle(line))) {
 
-          if (!this.config.west && prop.isWest(name)) {
-            continue;
-          }
+          if (this.isExcluded(name.toLowerCase())) continue;
+          if (!this.config.west && prop.isWest(name)) continue;
+          if (!this.config.east && prop.isEast(name)) continue;
 
-          if (!this.config.east && prop.isEast(name)) {
-            continue;
-          }
-
+          /* set the group so that on the next iteration, the url can be added under this line */
           group = prop.groupTitle(line);
-
-          let entry = line;
-
-          if (this.config.groups[group]['replace']) {
-            const replaceObj = this.config.groups[group]['replace'];
-
-            for (const re of Object.keys(replaceObj)) {
-              const searchFor = new RegExp(re, 'g');
-              const replaceWith = replaceObj[re].toString();
-
-              entry = entry.replace(searchFor, replaceWith);
-            }
-          }
-
-          this.config.groups[group].channels ?
-            this.config.groups[group].channels.push(entry) :
-            this.config.groups[group].channels = [entry];
-
-          triggered = true;
+          this.pushToGroup(line, group);
         }
-
+      } else if (line.startsWith('http')) {
+        this.pushUrlToGroup(group, line);
       } else {
-        if (triggered) {
-          this.config.groups[group].channels.push(line);
-          triggered = false;
-        }
+        io.error('Syntax error in playlist rawData');
+        process.exit(1);
       }
 
     }
 
-    return this.app.search ? process.exit(1) : this.createNewPlaylist(this.config.groups);
+    return this.config.groups;
   }
 
-  async createNewPlaylist (groups) {
-    if (groups.length <= 0) {
-      io.error('No channels were added!');
+  pushToGroup (line, group) {
+    let entry = line;
+
+    entry = this.replacer(group, entry);
+
+    this.groups[group] ?
+      this.groups[group].push(entry) :
+      this.groups[group] = [entry];
+  }
+
+  pushUrlToGroup (group, line) {
+    this.groups[group].push(line);
+  }
+
+  replacer (group, entry) {
+    if (this.config.groups[group]['replace']) {
+      const replaceObj = this.config.groups[group]['replace'];
+
+      for (let re of Object.keys(replaceObj)) {
+        let searchFor = re;
+
+        if (re.startsWith('r/')) {
+          re = re.split('/')[1];
+          searchFor = new RegExp(re, 'g');
+        }
+
+        const replaceWith = replaceObj[re].toString();
+
+        entry = entry.replace(searchFor, replaceWith);
+      }
+    }
+
+    return entry;
+  }
+
+  async createNewPlaylist () {
+    if (this.groups.length <= 0) {
+      io.error('No groups were added!');
       process.exit(1);
     }
 
-    const output = this.app.output ? `./output/${this.app.output}.m3u` : `./output/new.m3u`;
+    const output = this.config.output.m3u;
     let newFileContents = ['#EXTM3U'];
 
     let chanNum = this.config.minChannelNum;
 
-    for (let key of Object.keys(groups)) {
+    for (let key of Object.keys(this.groups)) {
 
-      for (let line of groups[key].channels) {
+      for (let line of this.groups[key]) {
         let entry = line;
 
+        let name = null;
+        let logo = null;
+        let chno = null;
+        let url = null;
+
         if (line.startsWith('#EXTINF:')) {
-          const chno = chanNum++;
+          chno = chanNum++;
+          name = prop.tvgName(entry);
+          logo = prop.tvgLogo(entry);
           entry = prop.setChno(line, chno);
-          entry = prop.setCUID(entry, `x-ID.${chno}`);
+        } else {
+          url = line;
+          this.channels
+            .create(name, chno, key, logo, url)
+            .catch(err => {
+              io.error(err);
+              process.exit(1);
+            });
         }
 
         newFileContents.push(entry);
       }
 
-      const len = groups[key].channels.length;
+      const len = this.groups[key].length;
       chanNum = (chanNum - len / 2 + 1000);
     }
 
@@ -166,8 +209,8 @@ module.exports = class M3uParser {
     return false;
   }
 
-  isGroupInConfig (line) {
-    return Object.keys(this.config.groups).includes(prop.groupTitle(line));
+  groupInConfig (group) {
+    return Object.keys(this.config.groups).includes(group);
   }
 
 };

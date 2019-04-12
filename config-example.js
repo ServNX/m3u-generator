@@ -1,17 +1,25 @@
 // copy or rename this file to config.js (which will be ignored in VCS)
 module.exports = {
-  // Set this to the URL or FILE PATH to your m3u playlist.
+  // Set this to the URL or ABSOLUTE FILE PATH to your m3u playlist.
   m3u: 'http://****:2086/get.php?username=***&password=***&type=m3u_plus&output=ts',
+
+  // Set this to the URL or ABSOLUTE FILE PATH to your m3u playlist.
+  xmltv: 'http://****:2086/xmltv.php?username=***&password=***&type=m3u_plus&output=ts',
+
+  // Set the output filenames here
+  output: {
+    m3u: 'mtp.m3u',
+    xml: 'mtp.xml'
+  },
+
+  // Starts here and increments each channel by 1
+  minChannelNum: 1000,
 
   // Allow Western Timezones ?
   west: false,
 
   // All Eastern Timezones ?
   east: true,
-
-  // The minimal number a channel number can be
-  // Starts here and increments each channel by 1
-  minChannelNum: 2000,
 
   // ZAP2IT Login Info
   zap: {
@@ -24,9 +32,11 @@ module.exports = {
   groups: {
     'USA TV': {
       // Replace feature
-      // Example: In this group I want to replace USA: with nothing (removing USA: from the channel name)
       replace: {
-        'USA:\\s': ''
+        'USA: ': '', // Replace 'USA: ' with '' (removing USA: from channel name)
+
+        /* You can also use a regular expression by prefixing it with r/ like in the below example */
+        'r/USA:\\s': '' // This does exactly the same as above but using a regular expression
       }
     },
     'KIDS TV': {},
@@ -40,42 +50,15 @@ module.exports = {
     'adult swim',
     'bein',
     'fox sports',
-    'abc',
-    'sports 4u',
-    'AMAZING DISCOVERIES',
-    'ANTENNA TV',
-    'ATLANTA CHANNEL',
-    'AXS TV',
-    'bounce',
-    'BUZZR',
-    'AKC TV',
-    'cbn',
-    'CELEBRITY PAGE TV',
-    'CLASSIC ARTS',
-    'CHARGE!',
     'DC COUNCIL CHANNEL',
     'classic tv',
     'DANCE MUSIC TV',
     'DANCESTAR TV',
-    'DECADES',
-    'DISCOVERY SHOWCASE',
-    'DISTRICT',
-    'DITTY',
-    'DOCUMENTARIES 4U',
-    'DOCURAMA',
     'DOG TV',
     'DPAN TV',
-    'dw',
-    'ELEVEN SPORTS',
     'ESPN COLLEGE EXTRA',
     'ESPN Bases Loaded',
     'FASHION',
-    'FOX DEPORTS',
-    'FOX SOCCER',
-    'FLASHBACK',
-    'FRONTDOOR',
-    'nbc sports',
-    'nesn',
     'PAC 12',
     'STADIUM',
     'TVW',

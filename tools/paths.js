@@ -1,5 +1,8 @@
 const path = require('path');
 
-module.exports.appPath = (...args) => {
+module.exports.base = base = (...args) => {
   return path.resolve(process.cwd(), ...args);
 };
+
+module.exports.db = (...args) => base('db', ...args);
+module.exports.output = (...args) => base('db', ...args);

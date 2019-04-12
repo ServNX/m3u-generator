@@ -10,12 +10,11 @@ const io = require('./tools/io');
 
 // todo: add logger
 // todo: add debug option and make use of it
-// todo: add better output, maybe some input from users ?
+// todo: add better output to console
 
 app
   .version('0.1.0', '-v, --version')
-  .option('-s, --search <keyword>', 'Search results that are like the search term')
-  .option('-o, --output [filename]', 'Specify the filename to be placed in the output directory', null, false)
+  .option('-u, --update', 'Update the playlist and XEPG data')
   .parse(process.argv);
 
 io.intro(figlet.textSync('M3U Pro', {
@@ -25,18 +24,15 @@ io.intro(figlet.textSync('M3U Pro', {
 }));
 
 async function run() {
-  const m3u = new M3U(app, config);
+  const m3u = container.M3uParser;
 
   await m3u.run()
-    .then(async data => {
-      httpServer.start(data);
-    })
     .catch(err => {
       io.error(err);
       process.exit(1);
     });
 
-
+  httpServer.start();
 }
 
 // Run the application

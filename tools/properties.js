@@ -8,16 +8,6 @@ module.exports.tvgId = tvgId = (line) => {
   return '';
 };
 
-module.exports.CUID = CUID = (line) => {
-  const regex = new RegExp('channelID="([^"]+)"');
-  const found = regex.exec(line);
-
-  if (found)
-    return found[1];
-
-  return '';
-};
-
 module.exports.tvgName = tvgName = (line) => {
   const regex = new RegExp('tvg-name="([^"]+)"');
   const found = regex.exec(line);
@@ -63,13 +53,6 @@ module.exports.setChno = setChno = (line, num) => {
     return line.replace(`tvg-chno="${tvgChno(line)}"`, `tvg-chno="${num}"`);
 
   return line.replace(` tvg-name="`, ` tvg-chno="${num}" tvg-name="`);
-};
-
-module.exports.setCUID = setCUID = (line, num) => {
-  if (CUID(line))
-    return line.replace(`channelID="${CUID(line)}"`, `channelID="${num}"`);
-
-  return line.replace(` tvg-id="`, ` channelID="${num}" tvg-id="`);
 };
 
 module.exports.hasKeyword = hasKeyword = (keyword, source) => {

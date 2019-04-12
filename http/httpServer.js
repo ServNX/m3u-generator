@@ -5,9 +5,9 @@ const Axios = require('axios');
 
 module.exports = class HttpServer {
   constructor (container) {
-    this.m3uParser = container.m3uParser;
+    this.db = container.DB;
 
-    this.port = port || 34800;
+    this.port = 34800;
     this.axios = Axios.create({baseURL: `http://127.0.0.1:${this.port}`});
     this.peer = null;
     this.device = null;
@@ -97,32 +97,18 @@ module.exports = class HttpServer {
   }
 
   async getLineupJson () {
-    let name;
-    let chno;
-    let triggered = false;
+    const channels = this.db.Channels().all();
+    const lineup = [];
 
-    const guideData = [];
-
-    for (const line of this.m3uParser.getNewData()) {
-
-      if (line.startsWith('#EXTINF:')) {
-        name = prop.tvgName(line);
-        chno = prop.tvgChno(line);
-        triggered = true;
-        continue;
-      }
-
-      if (triggered) {
-        guideData.push({
-          GuideName: name,
-          GuideNumber: chno,
-          URL: line
+    for (const chan of channels) {
+      lineup.push({
+        GuideName: chan.name,
+        GuideNumber: chan.number,
+        URL: chan.url
         });
-        triggered = false;
-      }
     }
 
-    return guideData;
+    return lineup;
   }
 
   getLineupStatusJson () {
