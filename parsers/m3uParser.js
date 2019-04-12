@@ -10,18 +10,17 @@ module.exports = class M3uParser {
   constructor (container) {
     this.app = container.App;
     this.config = container.Config;
-    this.channels = container.Channels;
+    this.db = container.DB;
 
     this.rawData = null;
 
-    this.groups = [];
+    this.groups = {};
   }
 
   async run () {
     if (this.config.m3u !== '') {
 
-      const channels = await this.channels
-        .all()
+      const channels = await this.db.channels.all()
         .catch(err => {
           io.error(err);
           process.exit(1);
@@ -100,18 +99,15 @@ module.exports = class M3uParser {
         }
       } else if (line.startsWith('http')) {
         this.pushUrlToGroup(group, line);
-      } else {
-        io.error('Syntax error in playlist rawData');
-        process.exit(1);
       }
 
     }
 
-    return this.config.groups;
+    return true;
   }
 
   pushToGroup (line, group) {
-    let entry = line;
+    let entry = line.trim();
 
     entry = this.replacer(group, entry);
 
@@ -121,7 +117,7 @@ module.exports = class M3uParser {
   }
 
   pushUrlToGroup (group, line) {
-    this.groups[group].push(line);
+    this.groups[group].push(line.trim());
   }
 
   replacer (group, entry) {
@@ -138,7 +134,7 @@ module.exports = class M3uParser {
 
         const replaceWith = replaceObj[re].toString();
 
-        entry = entry.replace(searchFor, replaceWith);
+        entry = entry.replace(searchFor, replaceWith).trim();
       }
     }
 
@@ -173,7 +169,7 @@ module.exports = class M3uParser {
           entry = prop.setChno(line, chno);
         } else {
           url = line;
-          this.channels
+          this.db.channels
             .create(name, chno, key, logo, url)
             .catch(err => {
               io.error(err);

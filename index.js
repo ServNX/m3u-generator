@@ -5,6 +5,8 @@ const container = require('./container/createContainer')();
 const app = container.App;
 const httpServer = container.HttpServer;
 const config = container.Config;
+const db = container.DB;
+const m3u = container.M3uParser;
 
 const io = require('./tools/io');
 
@@ -24,7 +26,8 @@ io.intro(figlet.textSync('M3U Pro', {
 }));
 
 async function run() {
-  const m3u = container.M3uParser;
+  const dataExists = await db.tableExists('channels');
+  if (!dataExists) await db.channels.createTable();
 
   await m3u.run()
     .catch(err => {

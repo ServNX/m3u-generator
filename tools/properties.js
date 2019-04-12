@@ -3,7 +3,7 @@ module.exports.tvgId = tvgId = (line) => {
   const found = regex.exec(line);
 
   if(found)
-    return found[1];
+    return found[1].toString();
 
   return '';
 };
@@ -13,7 +13,7 @@ module.exports.tvgName = tvgName = (line) => {
   const found = regex.exec(line);
 
   if (found)
-    return found[1];
+    return found[1].toString();
 
   return '';
 };
@@ -23,7 +23,7 @@ module.exports.groupTitle = groupTitle = (line) => {
   const found = regex.exec(line);
 
   if (found)
-    return found[1];
+    return found[1].toString();
 
   return '';
 };
@@ -33,7 +33,7 @@ module.exports.tvgLogo = tvgLogo = (line) => {
   const found = regex.exec(line);
 
   if(found)
-    return found[1];
+    return found[1].toString();
 
   return '';
 };
@@ -43,7 +43,7 @@ module.exports.tvgChno = tvgChno = (line) => {
   const found = regex.exec(line);
 
   if (found)
-    return found[1];
+    return found[1].toString();
 
   return false;
 };

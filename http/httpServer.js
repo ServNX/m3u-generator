@@ -97,7 +97,7 @@ module.exports = class HttpServer {
   }
 
   async getLineupJson () {
-    const channels = this.db.Channels().all();
+    const channels = await this.db.channels.all();
     const lineup = [];
 
     for (const chan of channels) {

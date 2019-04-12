@@ -1,12 +1,10 @@
 module.exports = class Channel {
-  constructor (db) {
-    this.db = db;
 
-    // todo: check if table exists ?
-    this.createTable();
+  constructor (DB) {
+    this.db = DB;
   }
 
-  createTable () {
+  async createTable () {
     this.db.serialize(() => {
       this.db.run(
           `CREATE TABLE channels
@@ -20,30 +18,36 @@ module.exports = class Channel {
            )`
       );
     });
+
+    return true;
   }
 
-  destroyTable () {
+  async destroyTable () {
     this.db.serialize(() => {
       // this.db.run();
     });
+
+    return true;
   }
 
-  async all () {
-    this.db.all('SELECT * FROM channels', (err, rows) => {
-      if (err) return Promise.reject(err);
-      return rows;
+  all () {
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT * FROM channels', (err, rows) => {
+        if (err) reject(err);
+        resolve(rows);
+      });
     });
   }
 
   async getById (id) {
-    this.db.get('SELECT * FROM channels WHERE id=?', [id], (err, row) => {
+    return this.db.get('SELECT * FROM channels WHERE id=?', [id], (err, row) => {
       if (err) return Promise.reject(err);
       return row;
     });
   }
 
   async getByName (name) {
-    this.db.all('SELECT * FROM channels WHERE name=?', [name], (err, rows) => {
+    return this.db.all('SELECT * FROM channels WHERE name=?', [name], (err, rows) => {
       if (err) return Promise.reject(err);
       return rows;
     });

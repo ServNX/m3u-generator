@@ -16,6 +16,11 @@ module.exports.header = (message) => {
   console.log(chalk.magenta('='.repeat(18 + message.length)));
 };
 
+module.exports.dd = (...args) => {
+  console.log(...args);
+  process.exit(1);
+};
+
 module.exports.ask = (questions) => {
   return new Promise(async (resolve, reject) => {
     await inquirer.prompt(questions)
