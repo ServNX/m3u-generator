@@ -26,7 +26,7 @@ module.exports = class M3uParser {
           process.exit(1);
         });
 
-      if (channels.length <= 0 || this.app.update) {
+      if (channels.length <= 0 || this.app.refresh) {
 
         if (this.config.m3u.startsWith('http')) {
           this.rawData = await this.downloadRemotePlaylist();
@@ -76,6 +76,7 @@ module.exports = class M3uParser {
 
   async processData () {
     let group = '';
+    let triggered = false;
 
     for (const [index, value] of this.rawData.entries()) {
       const line = value.toString();
@@ -85,9 +86,8 @@ module.exports = class M3uParser {
       }
 
       if (line.startsWith('#EXTINF:')) {
-        const name = prop.tvgName(line);
-
         if (this.groupInConfig(prop.groupTitle(line))) {
+          const name = prop.tvgName(line);
 
           if (this.isExcluded(name.toLowerCase())) continue;
           if (!this.config.west && prop.isWest(name)) continue;
@@ -96,9 +96,11 @@ module.exports = class M3uParser {
           /* set the group so that on the next iteration, the url can be added under this line */
           group = prop.groupTitle(line);
           this.pushToGroup(line, group);
+          triggered = true;
         }
-      } else if (line.startsWith('http')) {
+      } else if (triggered) {
         this.pushUrlToGroup(group, line);
+        triggered = false;
       }
 
     }
@@ -128,11 +130,10 @@ module.exports = class M3uParser {
         let searchFor = re;
 
         if (re.startsWith('r/')) {
-          re = re.split('/')[1];
-          searchFor = new RegExp(re, 'g');
+          searchFor = new RegExp(re.split('/')[1], 'g');
         }
 
-        const replaceWith = replaceObj[re].toString();
+        const replaceWith = replaceObj[re];
 
         entry = entry.replace(searchFor, replaceWith).trim();
       }
@@ -153,14 +154,13 @@ module.exports = class M3uParser {
     let chanNum = this.config.minChannelNum;
 
     for (let key of Object.keys(this.groups)) {
+      let name = null;
+      let logo = null;
+      let chno = null;
+      let url = null;
 
       for (let line of this.groups[key]) {
         let entry = line;
-
-        let name = null;
-        let logo = null;
-        let chno = null;
-        let url = null;
 
         if (line.startsWith('#EXTINF:')) {
           chno = chanNum++;

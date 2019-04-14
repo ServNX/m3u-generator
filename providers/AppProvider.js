@@ -1,4 +1,4 @@
-const App = require('commander');
+const App = require('../App');
 const Config = require('../config');
 
 const HttpServer = require('../http/httpServer');
@@ -8,7 +8,7 @@ const XmlTvParser = require('../parsers/xmlTvParser');
 const DB = require('../db/DB');
 
 module.exports = (container) => {
-  container.service('App', () => App);
+  container.service('App', () => new App());
   container.service('Config', () => Config);
 
   container.service('HttpServer', c => new HttpServer(c));

@@ -2,12 +2,14 @@ module.exports = class Channel {
 
   constructor (DB) {
     this.db = DB;
+
+    this.createTable();
   }
 
   async createTable () {
     this.db.serialize(() => {
       this.db.run(
-          `CREATE TABLE channels
+          `CREATE TABLE IF NOT EXISTS channels
            (
                id      INTEGER PRIMARY KEY AUTOINCREMENT,
                name    TEXT,
@@ -54,7 +56,7 @@ module.exports = class Channel {
   }
 
   async create (name, number, group, logo, url) {
-    this.db.run('INSERT INTO channels VALUES (?,?,?,?,?)', [name, number, group, logo, url], err => {
+    this.db.run('INSERT INTO channels (name, number, "group", logo, url) VALUES (?,?,?,?,?)', [name, number, group, logo, url], err => {
       if (err) return Promise.reject(err);
     });
 

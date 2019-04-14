@@ -7,13 +7,16 @@ module.exports = class DB {
     this.container = container;
     this.db = new SqlLite.Database('./db/m3uTunerPro.db');
 
+    /* Tables */
     this.channelsTable = new ChannelsTable(this.db);
   }
 
+  /* Table Getters */
   get channels () {
     return this.channelsTable;
   };
 
+  /* DB Methods */
   tableExists (table) {
     return new Promise((resolve, reject) => {
       this.db.get('SELECT * FROM sqlite_master WHERE name = ? and type = ?', [table, 'table'], (err, row) => {
