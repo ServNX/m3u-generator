@@ -3,7 +3,7 @@ const axios = require('axios');
 
 const io = require('../tools/io');
 const prop = require('../tools/properties');
-const path = require('../tools/paths');
+const paths = require('../tools/paths');
 
 module.exports = class M3uParser {
 
@@ -26,7 +26,7 @@ module.exports = class M3uParser {
           process.exit(1);
         });
 
-      if (channels.length <= 0 || this.app.refresh) {
+      if (channels.length <= 0 || this.app.fresh) {
 
         if (this.config.m3u.startsWith('http')) {
           this.rawData = await this.downloadRemotePlaylist();
@@ -148,7 +148,7 @@ module.exports = class M3uParser {
       process.exit(1);
     }
 
-    const output = this.config.output.m3u;
+    const output = paths.output(this.config.output.m3u);
     let newFileContents = ['#EXTM3U'];
 
     let chanNum = this.config.minChannelNum;
@@ -170,7 +170,7 @@ module.exports = class M3uParser {
         } else {
           url = line;
           this.db.channels
-            .create(name, chno, key, logo, url)
+            .updateOrNew(name, chno, key, logo, url)
             .catch(err => {
               io.error(err);
               process.exit(1);
@@ -184,9 +184,14 @@ module.exports = class M3uParser {
       chanNum = (chanNum - len / 2 + 1000);
     }
 
-    fs.writeFileSync(output, newFileContents.join('\n'));
-
-    io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
+    fs.writeFile(output, newFileContents.join('\n'), err => {
+      if (err) {
+        io.error(err);
+        process.exit(1);
+      }
+      io.success(`${Math.floor(newFileContents.length / 2).toString()} Channels Added Successfully!`);
+      io.success(`M3U File: ${output}`);
+    });
 
     return newFileContents;
   }

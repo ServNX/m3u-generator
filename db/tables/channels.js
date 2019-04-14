@@ -24,14 +24,6 @@ module.exports = class Channel {
     return true;
   }
 
-  async destroyTable () {
-    this.db.serialize(() => {
-      // this.db.run();
-    });
-
-    return true;
-  }
-
   all () {
     return new Promise((resolve, reject) => {
       this.db.all('SELECT * FROM channels', (err, rows) => {
@@ -42,25 +34,60 @@ module.exports = class Channel {
   }
 
   async getById (id) {
-    return this.db.get('SELECT * FROM channels WHERE id=?', [id], (err, row) => {
-      if (err) return Promise.reject(err);
-      return row;
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT * FROM channels WHERE id=?', [id], (err, row) => {
+        if (err) reject(err);
+        resolve(row);
+      });
     });
   }
 
   async getByName (name) {
-    return this.db.all('SELECT * FROM channels WHERE name=?', [name], (err, rows) => {
-      if (err) return Promise.reject(err);
-      return rows;
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT * FROM channels WHERE name = ?', [name], (err, rows) => {
+        if (err) reject(err);
+
+        resolve(rows);
+      });
     });
   }
 
-  async create (name, number, group, logo, url) {
-    this.db.run('INSERT INTO channels (name, number, "group", logo, url) VALUES (?,?,?,?,?)', [name, number, group, logo, url], err => {
-      if (err) return Promise.reject(err);
-    });
+  async existsByName (name) {
+    const results = await this.getByName(name);
+    return results.length > 0;
+  }
 
-    return true;
+  async create (name, number, group, logo, url) {
+    return new Promise((resolve, reject) => {
+      this.db.run(`INSERT INTO channels (name, number, "group", logo, url)
+                   VALUES (?, ?, ?, ?, ?)`,
+        [name, number, group, logo, url],
+        err => {
+          if (err) reject(err);
+        });
+
+      resolve(true);
+    });
+  }
+
+  async updateOrNew (name, number, group, logo, url) {
+    const exists = await this.existsByName(name);
+    if (!exists) return await this.create(name, number, group, logo, url);
+
+    return new Promise((resolve, reject) => {
+      this.db.run(`UPDATE channels
+                   SET number  = ?,
+                       "group" = ?,
+                       logo    = ?,
+                       url     = ?
+                   WHERE id = ?`,
+        [number, group, logo, url, name],
+        err => {
+          if (err) reject(err);
+        });
+
+      resolve(true);
+    });
   }
 
   async setNameWhereId (name, id) {

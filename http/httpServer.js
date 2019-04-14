@@ -15,21 +15,64 @@ module.exports = class HttpServer {
 
   async start () {
     /* Create Web Server */
-    const server = http.createServer(this.onRequest).listen(this.port);
+    const server = http.createServer(async (req, res) => {
+      const url = URL.parse(req.url, true);
+
+      if (this.device) {
+        if (url.pathname.indexOf(this.device.peer.prefix) !== 0) {
+          switch (req.url) {
+            case '/device.xml':
+            case '/capability':
+              res.writeHead(302, {
+                'Location': this.device.descriptionURL
+              });
+              res.end();
+              break;
+            case '/discover.json':
+              res.setHeader('Content-Type', 'application/json');
+              if (req.method === 'GET') res.write(JSON.stringify(this.getDiscoverJson()));
+              res.end();
+              break;
+            case '/lineup_status.json':
+              res.setHeader('Content-Type', 'application/json');
+              if (req.method === 'GET') res.write(JSON.stringify(this.getLineupStatusJson()));
+              res.end();
+              break;
+            case '/lineup.json':
+              res.setHeader('Content-Type', 'application/json');
+              if (req.method === 'GET') res.write(JSON.stringify(await this.getLineupJson()));
+              res.end();
+              break;
+            case '/lineup.post':
+              res.writeHead(200);
+              res.end();
+              break;
+            default:
+              res.writeHead(302, {
+                'Location': this.device.descriptionURL
+              });
+              res.end();
+          }
+        }
+      }
+    }).listen(this.port);
+
     console.log(`Listening on 127.0.0.1:${this.port}`);
 
     /* Create a HDHomeRun Device */
-    this.peer = upnp.createPeer({
+    upnp.createPeer({
       prefix: '/upnp',
       server: server
-    }).on('ready', () => {
+    }).on('ready', peer => {
       console.log('Device Ready');
-      this.device.advertise();
+      this.createDevice(peer);
     }).on('close', () => {
       console.log('closed');
     }).start();
+  }
 
-    this.device = this.peer.createDevice({
+  createDevice (peer) {
+    this.device = peer.createDevice({
       autoAdvertise: true,
       uuid: 'be976c91-6de8-4bec-b3b5-b635cd55c6ef',
       productName: 'M3U-Pro',
@@ -42,42 +85,8 @@ module.exports = class HttpServer {
       modelName: 'HDTC-2US',
       modelNumber: 'HDTC-2US',
     });
-  }
 
-  onRequest (req, res) {
-    const url = URL.parse(req.url, true);
-
-    if (url.pathname.indexOf(this.device.peer.prefix) !== 0) {
-      switch (req.url) {
-        case '/device.xml':
-        case '/capability':
-          res.writeHead(302, {
-            'Location': this.device.descriptionURL
-          });
-          res.end();
-          break;
-        case '/discover.json':
-          res.setHeader('Content-Type', 'application/json');
-          if (req.method === 'GET') res.write(JSON.stringify(this.getDiscoverJson()));
-          res.end();
-          break;
-        case '/lineup_status.json':
-          res.setHeader('Content-Type', 'application/json');
-          if (req.method === 'GET') res.write(JSON.stringify(this.getLineupStatusJson()));
-          res.end();
-          break;
-        case '/lineup.json':
-          res.setHeader('Content-Type', 'application/json');
-          if (req.method === 'GET') res.write(JSON.stringify(this.getLineupJson()));
-          res.end();
-          break;
-        default:
-          res.writeHead(302, {
-            'Location': this.device.descriptionURL
-          });
-          res.end();
-      }
-    }
+    this.device.advertise();
   }
 
   /* HANDLERS */

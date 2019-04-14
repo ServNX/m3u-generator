@@ -22,13 +22,13 @@ io.intro(figlet.textSync('M3U Pro', {
 }));
 
 async function run () {
+  httpServer.start();
+
   await m3u.run()
     .catch(err => {
       io.error(err);
       process.exit(1);
     });
-
-  httpServer.start();
 }
 
 // Run the application

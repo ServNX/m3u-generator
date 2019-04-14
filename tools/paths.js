@@ -5,4 +5,4 @@ module.exports.base = base = (...args) => {
 };
 
 module.exports.db = (...args) => base('db', ...args);
-module.exports.output = (...args) => base('db', ...args);
+module.exports.output = (...args) => base('output', ...args);

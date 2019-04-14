@@ -8,7 +8,7 @@ const XmlTvParser = require('../parsers/xmlTvParser');
 const DB = require('../db/DB');
 
 module.exports = (container) => {
-  container.service('App', () => new App());
+  container.service('App', () => new App().app);
   container.service('Config', () => Config);
 
   container.service('HttpServer', c => new HttpServer(c));
